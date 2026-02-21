@@ -1,0 +1,77 @@
+schema: spec-driven
+
+context: |
+  # Memories — CLI Tool for AI Agent Memory
+
+  ## Tech Stack
+  - Python 3.11+
+  - CLI framework: Typer (built on Click)
+  - Vector store: ChromaDB (client/server mode via HTTP)
+  - Data validation: Pydantic v2
+  - Configuration: pydantic-settings (env vars / .env)
+  - Testing: pytest + typer.testing.CliRunner
+  - Distribution: pipx (isolated install)
+  - Infrastructure: Docker Compose (ChromaDB only)
+
+  ## Architecture
+  - `memory` CLI tool installed on host via pipx
+  - ChromaDB runs as a separate Docker container (persistence via volume)
+  - CLI connects to ChromaDB via HTTP client
+  - Layers: CLI (Typer) → Service (business logic) → VectorStore Protocol → ChromaDB Adapter
+
+  ## Domain
+  - Memories are stored as ChromaDB documents with embeddings and metadata
+  - Predefined metadata fields: agent, personality, project, type, global
+  - Three decay policies: stable (no decay), contextual (linear decay), reinforceable (decay with reset)
+  - Confidence is computed lazily at query time — never stored
+  - Soft-delete via metadata flag, filtered on every search
+  - JSON is the default output format (AI agents are primary consumers)
+
+  ## Key Decisions (from SPEC.md)
+  - No versioning — agents delete and recreate
+  - No duplicate detection — agents query first
+  - No freeform tags — predefined metadata fields only
+  - No HTTP API — CLI only
+  - No tag discovery commands
+  - ChromaDB is the sole data store (no SQLite)
+  - Top-K search with configurable limit, no pagination
+
+  ## Conventions
+  - All CLI commands follow: memory <command> [args] [--options]
+  - Errors output JSON to stderr, exit code 1
+  - Success outputs JSON to stdout, exit code 0
+  - --format text available for human debugging
+  - Empty/unset optional metadata uses empty string "" (not null)
+
+  ## Project Structure
+  src/memories/
+    cli.py              — Typer app, command definitions
+    config.py           — pydantic-settings configuration
+    models.py           — Pydantic models + enums
+    services/
+      memory_service.py — Business logic orchestration
+      decay.py          — Confidence computation
+    stores/
+      vector_store.py   — VectorStore Protocol (abstract)
+      chromadb_adapter.py — ChromaDB implementation
+
+rules:
+  proposal:
+    - Reference the relevant section of SPEC.md for context
+    - Be explicit about which CLI commands are affected
+    - Note if the change affects the VectorStore Protocol interface
+  specs:
+    - Use WHEN/THEN/AND format for scenarios
+    - Include both JSON and text output expectations where relevant
+    - Cover error cases (not found, already deleted, wrong decay policy, ChromaDB down)
+    - Specify exact CLI flags and arguments involved
+  design:
+    - Explain ChromaDB metadata/query implications of the approach
+    - Document which layers (CLI, service, adapter) are affected
+    - Note if new configuration env vars are needed
+    - Address decay computation impact if applicable
+  tasks:
+    - Reference specific files from the project structure
+    - Include test tasks alongside implementation tasks
+    - Keep tasks to single-file or tightly-coupled changes
+    - Mark tasks that require a running ChromaDB instance

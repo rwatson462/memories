@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "memories"
+version = "0.1.0"
+description = "Persistent, searchable memory for AI agents"
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.9",
+    "chromadb>=0.4",
+    "pydantic>=2.0",
+    "pydantic-settings>=2.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest",
+    "httpx",
+]
+
+[project.scripts]
+memory = "memories.cli:app"
+
+[tool.setuptools.packages.find]
+where = ["src"]
