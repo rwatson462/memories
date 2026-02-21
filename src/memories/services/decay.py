@@ -12,6 +12,7 @@ def compute_confidence(
     created_at: datetime,
     last_reinforced_at: datetime | None,
     half_life_hours: float,
+    now: datetime | None = None,
 ) -> float:
     """Calculate current confidence for a memory based on its decay policy.
 
@@ -22,11 +23,14 @@ def compute_confidence(
       - contextual: linear decay from created_at to zero over half_life_hours.
       - reinforceable: same linear decay, but age is measured from
         last_reinforced_at (falls back to created_at if never reinforced).
+
+    Pass *now* explicitly to get deterministic results in tests;
+    defaults to the current UTC time.
     """
     if decay_policy == "stable":
         return 1.0
 
-    now = datetime.now(timezone.utc)
+    now = now or datetime.now(timezone.utc)
 
     if decay_policy == "reinforceable" and last_reinforced_at is not None:
         # Reinforceable memories reset their age on reinforcement.

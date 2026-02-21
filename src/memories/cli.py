@@ -27,17 +27,23 @@ def main() -> None:
 # ---------------------------------------------------------------------------
 
 
-def output_json(data: dict, file=sys.stdout) -> None:
-    """Serialize *data* as pretty-printed JSON."""
+def output_json(data: dict, file=None) -> None:
+    """Serialize *data* as pretty-printed JSON.
+
+    Resolves *file* at call time (not import time) so that
+    typer.testing.CliRunner's stdout redirection works correctly.
+    """
+    file = file or sys.stdout
     print(json.dumps(data, indent=2, default=str), file=file)
 
 
-def output_text(data: dict, file=sys.stdout) -> None:
+def output_text(data: dict, file=None) -> None:
     """Render *data* as simple ``key: value`` lines.
 
     Nested lists (e.g. search results) are printed as indented blocks
     separated by ``---``.
     """
+    file = file or sys.stdout
     for key, value in data.items():
         if isinstance(value, list):
             print(f"{key}:", file=file)
@@ -53,8 +59,9 @@ def output_text(data: dict, file=sys.stdout) -> None:
             print(f"{key}: {value}", file=file)
 
 
-def _output(data: dict, fmt: OutputFormat, file=sys.stdout) -> None:
+def _output(data: dict, fmt: OutputFormat, file=None) -> None:
     """Route to the appropriate formatter based on ``--format``."""
+    file = file or sys.stdout
     if fmt == OutputFormat.JSON:
         output_json(data, file=file)
     else:
