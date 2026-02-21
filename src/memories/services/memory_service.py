@@ -29,7 +29,7 @@ class MemoryNotFoundError(Exception):
 
     def __init__(self, id: str) -> None:
         self.id = id
-        super().__init__(f"Memory not found: {id}")
+        super().__init__(f"Memory '{id}' not found")
 
 
 class InvalidOperationError(Exception):
@@ -199,9 +199,14 @@ class MemoryService:
 
         policy = doc["metadata"].get("decay_policy", "")
         if policy != DecayPolicy.REINFORCEABLE.value:
-            raise InvalidOperationError(
-                f"Only reinforceable memories can be reinforced (this memory is {policy})"
-            )
+            # Policy-specific messages per spec so the user knows *why* it failed.
+            if policy == DecayPolicy.STABLE.value:
+                msg = "Memory has stable decay policy, reinforcement has no effect"
+            elif policy == DecayPolicy.CONTEXTUAL.value:
+                msg = "Memory has contextual decay policy, reinforcement is not supported"
+            else:
+                msg = f"Memory has {policy} decay policy, cannot be reinforced"
+            raise InvalidOperationError(msg)
 
         now = datetime.now(timezone.utc).isoformat()
         self._store.update_metadata(id, {"last_reinforced_at": now})
@@ -223,7 +228,7 @@ class MemoryService:
             raise MemoryNotFoundError(id)
 
         if doc["metadata"].get("deleted", False):
-            raise InvalidOperationError(f"Memory {id} is already deleted")
+            raise InvalidOperationError(f"Memory '{id}' is already deleted")
 
         self._store.update_metadata(id, {"deleted": True})
 

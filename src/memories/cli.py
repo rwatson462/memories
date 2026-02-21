@@ -38,25 +38,38 @@ def output_json(data: dict, file=None) -> None:
 
 
 def output_text(data: dict, file=None) -> None:
-    """Render *data* as simple ``key: value`` lines.
+    """Render *data* as human-readable text.
 
-    Nested lists (e.g. search results) are printed as indented blocks
-    separated by ``---``.
+    Single-memory output uses padded key-value alignment.
+    Search output prints each result separated by blank lines
+    with a summary count at the end.
     """
     file = file or sys.stdout
+
+    # Search results get special treatment: per-result blocks + summary.
+    if "results" in data and isinstance(data["results"], list):
+        for i, item in enumerate(data["results"]):
+            if isinstance(item, dict):
+                _print_padded(item, file)
+            if i < len(data["results"]) - 1:
+                print(file=file)  # Blank line between results.
+        count = data.get("count", len(data["results"]))
+        print(f"\nFound {count} memories", file=file)
+        return
+
+    # Single-memory or status output: padded key-value pairs.
+    _print_padded(data, file)
+
+
+def _print_padded(data: dict, file) -> None:
+    """Print a dict as padded ``Key:  value`` lines for readability."""
+    if not data:
+        return
+    # Pad all keys to the width of the longest key.
+    max_key = max(len(str(k)) for k in data)
     for key, value in data.items():
-        if isinstance(value, list):
-            print(f"{key}:", file=file)
-            for i, item in enumerate(value):
-                if isinstance(item, dict):
-                    for k, v in item.items():
-                        print(f"  {k}: {v}", file=file)
-                    if i < len(value) - 1:
-                        print("  ---", file=file)
-                else:
-                    print(f"  {item}", file=file)
-        else:
-            print(f"{key}: {value}", file=file)
+        label = f"{key}:".ljust(max_key + 2)
+        print(f"{label}{value}", file=file)
 
 
 def _output(data: dict, fmt: OutputFormat, file=None) -> None:
@@ -95,7 +108,7 @@ def _handle_error(exc: Exception) -> None:
     from unexpected errors (assumed to be ChromaDB connection failures).
     """
     if isinstance(exc, MemoryNotFoundError):
-        output_json({"error": "Memory not found"}, file=sys.stderr)
+        output_json({"error": f"Memory '{exc.id}' not found"}, file=sys.stderr)
     elif isinstance(exc, InvalidOperationError):
         output_json({"error": str(exc)}, file=sys.stderr)
     else:
